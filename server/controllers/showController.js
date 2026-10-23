@@ -57,19 +57,40 @@ export const addShow = async (req, res) =>{
              movie = await Movie.create(movieDetails);
         }
 
-        const showsToCreate = [];
-        showsInput.forEach(show => {
-            const showDate = show.date;
-            show.time.forEach((time)=>{
-                const dateTimeString = `${showDate}T${time}`;
-                showsToCreate.push({
-                    movie: movieId,
-                    showDateTime: new Date(dateTimeString),
-                    showPrice,
-                    occupiedSeats: {}
-                })
-            })
+        
+const showsToCreate = [];
+
+showsInput.forEach(show => {
+    const showDate = show.date;
+
+    // Support both a single time string and an array of times
+    const times = Array.isArray(show.time)
+        ? show.time
+        : [show.time];
+
+    times.forEach(time => {
+        const dateTimeString = `${showDate}T${time}`;
+        const showDateTime = new Date(dateTimeString);
+
+        // Reject invalid or past show times
+        if (
+            Number.isNaN(showDateTime.getTime()) ||
+            showDateTime <= new Date()
+        ) {
+            throw new Error(
+                `Invalid or past show time: ${dateTimeString}`
+            );
+        }
+
+        showsToCreate.push({
+            movie: movieId,
+            showDateTime,
+            showPrice,
+            occupiedSeats: {}
         });
+    });
+});
+
 
         if(showsToCreate.length > 0){
             await Show.insertMany(showsToCreate);
